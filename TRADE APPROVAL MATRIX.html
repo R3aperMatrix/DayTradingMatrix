@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trade Approval Matrix</title>
+    <style>
+        /* Existing CSS styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e0e5ec;
+            height: 100%;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            padding-top: 100px; /* Adjusted to prevent overlap with header */
+        }
+        /* New styles for the header */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #3498db;
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        #header h1 {
+            margin: 0;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        /* Style for the "Add Instrument" button in the header */
+        #header #add-instrument {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            padding: 10px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 10px;
+            width: 150px;
+        }
+        #header #add-instrument:hover {
+            background: #2980b9;
+        }
+        /* Restored styles for instrument container */
+        .instrument-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .instrument {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            box-sizing: border-box;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            font-size: 16px;
+            transition: transform 0.3s, opacity 0.3s;
+            min-height: 400px;
+        }
+        .instrument.inactive {
+            background: #bdc3c7;
+            opacity: 0.6;
+            transform: scale(0.8);
+        }
+        .instrument h2, .instrument-name {
+            font-size: 24px;
+            color: #3498db;
+            margin-bottom: 10px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            outline: none;
+            font-weight: bold;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .controls select, .controls input, .controls button {
+            padding: 6px;
+            font-size: 14px;
+            border-radius: 5px;
+            outline: none;
+        }
+        .controls input, .controls select {
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+        .controls button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        .controls button:hover {
+            background: #2980b9;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .checklist li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 90%;
+            background: #f9f9f9;
+            padding: 5px 10px;
+            margin: 3px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            font-size: 16px;
+        }
+        .checklist input[type="text"], .checklist input[type="number"] {
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            outline: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        .checklist input[type="number"] {
+            width: 60px;
+        }
+        .checklist input[type="checkbox"] {
+            margin-left: 10px;
+            transform: scale(1.5);
+        }
+        .delete-btn {
+            cursor: pointer;
+            padding: 5px;
+            border: none;
+            background: none;
+            font-size: 20px;
+            color: #e74c3c;
+        }
+        .delete-btn:hover {
+            color: #c0392b;
+        }
+        .add-item-btn {
+            background: #2ecc71;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .add-item-btn:hover {
+            background: #27ae60;
+        }
+        .summary {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 24px;
+            color: #555;
+            font-weight: bold;
+        }
+        .delete-instrument-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #e74c3c;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .delete-instrument-btn:hover {
+            background: #c0392b;
+        }
+        /* Style for drag handle */
+        .drag-handle {
+            cursor: move;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 20px;
+            color: #7f8c8d;
+        }
+        /* Additional styles for drag and drop */
+        .instrument.dragging {
+            opacity: 0.5;
+        }
+        /* Styles for total weight display */
+        .total-weight {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        /* Styles for inactive state */
+        .inactive-message {
+            font-size: 24px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-top: 20px;
+        }
+        /* Prevent drag on input elements */
+        input, textarea {
+            user-select: text;
+            -webkit-user-drag: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Updated header section -->
+    <div id="header">
+        <h1>Trade Approval Matrix</h1>
+        <button id="add-instrument">Add Instrument</button>
+    </div>
+    <div id="app">
+        <div id="active-instruments" class="instrument-container"></div>
+        <div id="inactive-instruments" class="instrument-container"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = document.getElementById('app');
+            const activeContainer = document.getElementById('active-instruments');
+            const inactiveContainer = document.getElementById('inactive-instruments');
+            const addInstrumentButton = document.getElementById('add-instrument');
+            let instruments = [];
+
+            // Centralized storage for item definitions
+            const globalItems = {
+                'Bullish Bias': [],
+                'Bearish Bias': []
+            };
+
+            // Storage for instrument states
+            let instrumentStates = {};
+
+            // Load data from local storage
+            function loadData() {
+                try {
+                    const savedInstruments = JSON.parse(localStorage.getItem('instruments'));
+                    if (Array.isArray(savedInstruments)) instruments = savedInstruments;
+                } catch (e) {
+                    console.error('Failed to parse saved instruments:', e);
+                    instruments = [];
+                }
+
+                try {
+                    const savedItems = JSON.parse(localStorage.getItem('globalItems'));
+                    if (savedItems && typeof savedItems === 'object') {
+                        for (const bias in savedItems) {
+                            if (Array.isArray(savedItems[bias])) {
+                                globalItems[bias] = savedItems[bias];
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse saved global items:', e);
+                }
+
+                try {
+                    const savedStates = JSON.parse(localStorage.getItem('instrumentStates'));
+                    if (savedStates && typeof savedStates === 'object') {
+                        instrumentStates = savedStates;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse saved instrument states:', e);
+                    instrumentStates = {};
+                }
+            }
+
+            // Save data to local storage
+            function saveData() {
+                localStorage.setItem('instruments', JSON.stringify(instruments));
+                localStorage.setItem('globalItems', JSON.stringify(globalItems));
+                localStorage.setItem('instrumentStates', JSON.stringify(instrumentStates));
+            }
+
+            function renderApp() {
+                activeContainer.innerHTML = '';
+                inactiveContainer.innerHTML = '';
+                sortInstruments();
+                instruments.forEach(renderInstrument);
+                addDragAndDrop();
+            }
+
+            function renderInstrument(instrument) {
+                const instrumentId = instrument.id;
+                const instrumentDiv = document.createElement('div');
+                instrumentDiv.className = 'instrument';
+                instrumentDiv.id = `instrument-${instrumentId}`;
+                // Remove draggable attribute from instrumentDiv
+
+                instrumentDiv.innerHTML = `
+                    <div class="drag-handle" draggable="true">⋮⋮</div>
+                    <button class="delete-instrument-btn">Delete</button>
+                    <input type="text" class="instrument-name" value="${instrument.name}" placeholder="Instrument Name" />
+                    <div class="controls">
+                        <select id="bias-${instrumentId}">
+                            <option value="Bullish Bias">Bullish Bias</option>
+                            <option value="Bearish Bias">Bearish Bias</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="total-weight" id="total-weight-${instrumentId}">Total Weight: 0% / 100%</div>
+                    <ul id="checklist-${instrumentId}" class="checklist"></ul>
+                    <button class="add-item-btn" id="add-item-${instrumentId}">Add Trading Rule</button>
+                    <div class="summary" id="summary-${instrumentId}">SIT ON YOUR FUCKING HANDS</div>
+                    <div class="inactive-message" id="inactive-${instrumentId}">INACTIVE</div>
+                `;
+
+                // Initialize instrument state if not present
+                if (!instrumentStates[instrumentId]) {
+                    instrumentStates[instrumentId] = {
+                        bias: 'Bullish Bias',
+                        checkedItems: {
+                            'Bullish Bias': [],
+                            'Bearish Bias': []
+                        }
+                    };
+                }
+
+                const instrumentNameInput = instrumentDiv.querySelector('.instrument-name');
+                instrumentNameInput.addEventListener('input', (e) => {
+                    instrument.name = e.target.value;
+                    saveData();
+                });
+
+                const selectBias = instrumentDiv.querySelector(`#bias-${instrumentId}`);
+                selectBias.value = instrumentStates[instrumentId].bias;
+                selectBias.addEventListener('change', () => {
+                    instrumentStates[instrumentId].bias = selectBias.value;
+                    saveData();
+                    updateInstrumentAppearance(instrumentDiv, selectBias.value);
+                    renderApp(); // Re-render app to move instruments
+                });
+
+                const addItemButton = instrumentDiv.querySelector(`#add-item-${instrumentId}`);
+                addItemButton.addEventListener('click', () => addItem(selectBias.value));
+
+                instrumentDiv.querySelector('.delete-instrument-btn').addEventListener('click', () => {
+                    instruments = instruments.filter(i => i.id !== instrument.id);
+                    delete instrumentStates[instrument.id];
+                    saveData();
+                    renderApp();
+                });
+
+                // Set initial appearance based on bias
+                updateInstrumentAppearance(instrumentDiv, selectBias.value);
+
+                // Append to appropriate container
+                if (instrumentStates[instrumentId].bias === 'Inactive') {
+                    inactiveContainer.appendChild(instrumentDiv);
+                } else {
+                    activeContainer.appendChild(instrumentDiv);
+                }
+
+                renderChecklist(instrument);
+            }
+
+            function addItem(bias) {
+                // Ensure items array exists for the bias
+                if (!Array.isArray(globalItems[bias])) {
+                    globalItems[bias] = [];
+                }
+
+                const items = globalItems[bias];
+                const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+
+                if (totalWeight >= 100) {
+                    alert("Total weight cannot exceed 100%");
+                    return;
+                }
+
+                items.push({ name: '', weight: 0 });
+                // Update checked state for all instruments
+                for (const instrumentId in instrumentStates) {
+                    instrumentStates[instrumentId].checkedItems[bias].push(false);
+                }
+                saveData();
+                renderApp();
+            }
+
+            function renderChecklist(instrument) {
+                const instrumentId = instrument.id;
+                const instrumentDiv = document.getElementById(`instrument-${instrumentId}`);
+                const checklistElement = instrumentDiv.querySelector(`#checklist-${instrumentId}`);
+                const totalWeightElement = instrumentDiv.querySelector(`#total-weight-${instrumentId}`);
+                const summaryElement = instrumentDiv.querySelector(`#summary-${instrumentId}`);
+                const addItemButton = instrumentDiv.querySelector(`#add-item-${instrumentId}`);
+                const inactiveMessage = instrumentDiv.querySelector(`#inactive-${instrumentId}`);
+                const bias = instrumentStates[instrumentId].bias;
+
+                if (bias === 'Inactive') {
+                    // Hide checklists and controls, show inactive message
+                    instrumentDiv.classList.add('inactive');
+                    instrumentDiv.classList.remove('active');
+                    checklistElement.style.display = 'none';
+                    totalWeightElement.style.display = 'none';
+                    summaryElement.style.display = 'none';
+                    addItemButton.style.display = 'none';
+                    inactiveMessage.style.display = 'block';
+                    return;
+                } else {
+                    // Show checklists and controls, hide inactive message
+                    instrumentDiv.classList.remove('inactive');
+                    instrumentDiv.classList.add('active');
+                    checklistElement.style.display = 'flex';
+                    totalWeightElement.style.display = 'block';
+                    summaryElement.style.display = 'block';
+                    addItemButton.style.display = 'block';
+                    inactiveMessage.style.display = 'none';
+                }
+
+                checklistElement.innerHTML = '';
+
+                // Ensure items array exists for the bias
+                if (!Array.isArray(globalItems[bias])) {
+                    globalItems[bias] = [];
+                }
+
+                const items = globalItems[bias];
+
+                // Ensure checkedItems array exists for the instrument and bias
+                if (!Array.isArray(instrumentStates[instrumentId].checkedItems[bias])) {
+                    instrumentStates[instrumentId].checkedItems[bias] = items.map(() => false);
+                }
+
+                // Adjust checkedItems array length if items have been added or removed
+                if (instrumentStates[instrumentId].checkedItems[bias].length !== items.length) {
+                    instrumentStates[instrumentId].checkedItems[bias] = items.map(() => false);
+                }
+
+                items.forEach((item, index) => {
+                    const itemElement = document.createElement('li');
+                    itemElement.innerHTML = `
+                        <button class="delete-btn" data-index="${index}" data-bias="${bias}">×</button>
+                        <input type="text" value="${item.name}" placeholder="Trading Rule" />
+                        <input type="number" value="${item.weight}" min="0" max="100" />%
+                        <input type="checkbox" ${instrumentStates[instrumentId].checkedItems[bias][index] ? 'checked' : ''} />
+                    `;
+
+                    const nameInput = itemElement.querySelector('input[type="text"]');
+                    nameInput.addEventListener('input', (e) => {
+                        item.name = e.target.value;
+                        saveData();
+                        // Removed updateAllChecklists(bias) from here
+                    });
+
+                    nameInput.addEventListener('blur', (e) => {
+                        updateAllChecklists(bias); // Update all instruments when input loses focus
+                    });
+
+                    const weightInput = itemElement.querySelector('input[type="number"]');
+                    weightInput.addEventListener('input', (e) => {
+                        let newWeight = parseInt(e.target.value, 10);
+                        if (isNaN(newWeight) || newWeight < 0) {
+                            newWeight = 0;
+                        }
+                        const otherWeights = items.reduce((sum, itm, idx) => sum + (idx !== index ? itm.weight : 0), 0);
+                        if (otherWeights + newWeight > 100) {
+                            newWeight = 100 - otherWeights;
+                            e.target.value = newWeight;
+                        }
+                        item.weight = newWeight;
+                        saveData();
+                        // Update total weight and quality for all instruments
+                        updateAllTotalWeights(bias);
+                        updateAllQualities(bias);
+                    });
+
+                    const checkbox = itemElement.querySelector('input[type="checkbox"]');
+                    checkbox.addEventListener('change', (e) => {
+                        instrumentStates[instrumentId].checkedItems[bias][index] = e.target.checked;
+                        saveData();
+                        calculateQuality(instrument);
+                    });
+
+                    itemElement.querySelector('.delete-btn').addEventListener('click', () => {
+                        items.splice(index, 1);
+                        // Remove checked state for all instruments
+                        for (const instrId in instrumentStates) {
+                            instrumentStates[instrId].checkedItems[bias].splice(index, 1);
+                        }
+                        saveData();
+                        updateAllChecklists(bias);
+                    });
+
+                    checklistElement.appendChild(itemElement);
+                });
+
+                calculateTotalWeight(instrument);
+                calculateQuality(instrument);
+            }
+
+            function calculateTotalWeight(instrument) {
+                const instrumentDiv = document.getElementById(`instrument-${instrument.id}`);
+                const totalWeightElement = instrumentDiv.querySelector(`.total-weight`);
+                const bias = instrumentStates[instrument.id].bias;
+                const items = globalItems[bias];
+                const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+                totalWeightElement.textContent = `Total Weight: ${totalWeight}% / 100%`;
+            }
+
+            function calculateQuality(instrument) {
+                const instrumentDiv = document.getElementById(`instrument-${instrument.id}`);
+                const summaryElement = instrumentDiv.querySelector(`.summary`);
+                const bias = instrumentStates[instrument.id].bias;
+                const items = globalItems[bias];
+                const checkedItems = instrumentStates[instrument.id].checkedItems[bias];
+
+                const totalCheckedWeight = items.reduce((sum, item, index) => sum + (checkedItems[index] ? item.weight : 0), 0);
+
+                if (totalCheckedWeight >= 90) {
+                    summaryElement.textContent = 'A+ setup! Go get \'em, tiger!';
+                } else if (totalCheckedWeight >= 80) {
+                    summaryElement.textContent = 'Looking strong! Seize the moment!';
+                } else if (totalCheckedWeight >= 60) {
+                    summaryElement.textContent = 'Decent setup—proceed with caution.';
+                } else {
+                    summaryElement.textContent = 'SIT ON YOUR FUCKING HANDS';
+                }
+            }
+
+            function updateAllChecklists(bias) {
+                instruments.forEach((instrument) => {
+                    if (instrumentStates[instrument.id].bias === bias && instrumentStates[instrument.id].bias !== 'Inactive') {
+                        renderChecklist(instrument);
+                    }
+                });
+            }
+
+            function updateAllTotalWeights(bias) {
+                instruments.forEach((instrument) => {
+                    if (instrumentStates[instrument.id].bias === bias && instrumentStates[instrument.id].bias !== 'Inactive') {
+                        calculateTotalWeight(instrument);
+                    }
+                });
+            }
+
+            function updateAllQualities(bias) {
+                instruments.forEach((instrument) => {
+                    if (instrumentStates[instrument.id].bias === bias && instrumentStates[instrument.id].bias !== 'Inactive') {
+                        calculateQuality(instrument);
+                    }
+                });
+            }
+
+            function updateInstrumentAppearance(instrumentDiv, bias) {
+                if (bias === 'Bullish Bias') {
+                    instrumentDiv.style.backgroundColor = 'rgba(39, 174, 96, 0.3)';
+                } else if (bias === 'Bearish Bias') {
+                    instrumentDiv.style.backgroundColor = 'rgba(192, 57, 43, 0.3)';
+                } else if (bias === 'Inactive') {
+                    instrumentDiv.style.backgroundColor = '#bdc3c7';
+                } else {
+                    instrumentDiv.style.backgroundColor = '#fff';
+                }
+            }
+
+            function addDragAndDrop() {
+                // Active instruments
+                const activeInstruments = activeContainer.querySelectorAll('.instrument');
+                activeInstruments.forEach((instrumentDiv) => {
+                    const dragHandle = instrumentDiv.querySelector('.drag-handle');
+                    dragHandle.addEventListener('dragstart', dragStart);
+                    instrumentDiv.addEventListener('dragover', dragOver);
+                    instrumentDiv.addEventListener('drop', dragDrop);
+                    instrumentDiv.addEventListener('dragend', dragEnd);
+                });
+
+                // Inactive instruments
+                const inactiveInstruments = inactiveContainer.querySelectorAll('.instrument');
+                inactiveInstruments.forEach((instrumentDiv) => {
+                    const dragHandle = instrumentDiv.querySelector('.drag-handle');
+                    dragHandle.addEventListener('dragstart', dragStart);
+                    instrumentDiv.addEventListener('dragover', dragOver);
+                    instrumentDiv.addEventListener('drop', dragDrop);
+                    instrumentDiv.addEventListener('dragend', dragEnd);
+                });
+            }
+
+            let draggedItem = null;
+
+            function dragStart(e) {
+                draggedItem = this.parentElement; // The instrument div
+                setTimeout(() => {
+                    draggedItem.classList.add('dragging');
+                }, 0);
+            }
+
+            function dragOver(e) {
+                e.preventDefault();
+            }
+
+            function dragDrop(e) {
+                e.preventDefault();
+                if (this !== draggedItem) {
+                    const container = this.parentElement;
+                    const nodes = Array.from(container.children);
+                    const draggedIndex = nodes.indexOf(draggedItem);
+                    const droppedIndex = nodes.indexOf(this);
+
+                    if (draggedIndex < droppedIndex) {
+                        container.insertBefore(draggedItem, this.nextSibling);
+                    } else {
+                        container.insertBefore(draggedItem, this);
+                    }
+
+                    // Update instruments array to reflect new order
+                    const activeInstruments = Array.from(activeContainer.children).map(div => {
+                        const input = div.querySelector('.instrument-name');
+                        return {
+                            id: div.id.replace('instrument-', ''),
+                            name: input ? input.value : ''
+                        };
+                    });
+
+                    const inactiveInstruments = Array.from(inactiveContainer.children).map(div => {
+                        const input = div.querySelector('.instrument-name');
+                        return {
+                            id: div.id.replace('instrument-', ''),
+                            name: input ? input.value : ''
+                        };
+                    });
+
+                    instruments = [...activeInstruments, ...inactiveInstruments];
+
+                    saveData();
+                }
+            }
+
+            function dragEnd() {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+
+            function sortInstruments() {
+                // Move inactive instruments to the end
+                instruments.sort((a, b) => {
+                    const biasA = instrumentStates[a.id].bias;
+                    const biasB = instrumentStates[b.id].bias;
+                    if (biasA === 'Inactive' && biasB !== 'Inactive') return 1;
+                    if (biasA !== 'Inactive' && biasB === 'Inactive') return -1;
+                    return 0;
+                });
+                saveData();
+            }
+
+            addInstrumentButton.addEventListener('click', () => {
+                // Generate a unique ID for the instrument
+                const instrumentId = 'instr-' + Date.now();
+                const newInstrument = {
+                    id: instrumentId,
+                    name: ''
+                };
+                instruments.push(newInstrument);
+                // Initialize instrument state
+                instrumentStates[instrumentId] = {
+                    bias: 'Bullish Bias',
+                    checkedItems: {
+                        'Bullish Bias': globalItems['Bullish Bias'].map(() => false),
+                        'Bearish Bias': globalItems['Bearish Bias'].map(() => false)
+                    }
+                };
+                saveData();
+                renderApp();
+            });
+
+            loadData();
+            renderApp();
+        });
+    </script>
+</body>
+</html>
